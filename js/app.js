@@ -108,7 +108,21 @@ async function init() {
   });
 
   supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
+    const hash       = location.hash.slice(1);
+    const isMagicLink = hash.startsWith('access_token') || hash.startsWith('error=');
+
+    if (event === 'INITIAL_SESSION') {
+      if (session) {
+        state.user = session.user;
+        await loadUserData();
+        const safeRoutes = ['home', 'analysis', 'settings'];
+        render(safeRoutes.includes(hash) ? hash : 'home');
+        syncOfflineShots();
+      } else if (!isMagicLink) {
+        render('auth');
+      }
+      // If isMagicLink with no session yet — wait for SIGNED_IN below
+    } else if (event === 'SIGNED_IN' && session) {
       state.user = session.user;
       await loadUserData();
       history.replaceState(null, '', location.pathname + '#home');
@@ -122,25 +136,6 @@ async function init() {
       render('auth');
     }
   });
-
-  const session = await getSession();
-  const hash = location.hash.slice(1);
-  const isMagicLink = hash.startsWith('access_token') || hash.startsWith('error=');
-
-  if (session && !isMagicLink) {
-    state.user = session.user;
-    await loadUserData();
-    const safeRoutes = ['home', 'analysis', 'settings'];
-    render(safeRoutes.includes(hash) ? hash : 'home');
-    syncOfflineShots();
-  } else if (!isMagicLink) {
-    render('auth');
-  }
-}
-
-async function getSession() {
-  const { data } = await supabase.auth.getSession();
-  return data.session;
 }
 
 init().catch(console.error);
