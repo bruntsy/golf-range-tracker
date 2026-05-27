@@ -34,6 +34,9 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
+  // Only handle http/https — ignore chrome-extension and other schemes
+  if (!url.protocol.startsWith('http')) return;
+
   // Network-first for Supabase API
   if (url.hostname.includes('supabase.co')) {
     e.respondWith(
