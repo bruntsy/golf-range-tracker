@@ -44,76 +44,54 @@ function renderTrends() {
   const content  = document.getElementById('tab-content');
   const last10   = sessions.slice(0, 10).reverse();
   const allShots = sessions.flatMap((s) => s.shots || []);
-  const misses   = { left: 0, right: 0, long: 0, short: 0 };
-  allShots.filter((s) => s.result !== 'hit').forEach((s) => misses[s.result]++);
+
+  const dist = { hit: 0, left: 0, right: 0, long: 0, short: 0 };
+  allShots.forEach((s) => dist[s.result]++);
+  const total = allShots.length || 1;
 
   content.innerHTML = `
+    ${last10.length > 1 ? `
     <div class="chart-card">
       <h3>Accuracy Trend</h3>
       <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
-    </div>
+    </div>` : ''}
+
     <div class="chart-card">
-      <h3>Miss Direction</h3>
-      <div class="chart-wrap chart-wrap-sm"><canvas id="miss-chart"></canvas></div>
+      <h3>Shot Distribution <span class="dist-total">${allShots.length} shots</span></h3>
+      ${shotDistGrid(dist, total)}
     </div>
+
     <div class="section">
       <h3 class="section-title">Session History</h3>
       ${sessions.map(sessionRow).join('') || '<p class="empty-state">No sessions yet.</p>'}
     </div>
   `;
 
-  importChart().then((Chart) => {
-    chartInstances.push(new Chart(document.getElementById('trend-chart'), {
-      type: 'line',
-      data: {
-        labels: last10.map((s) => fmtDate(s.started_at)),
-        datasets: [{
-          label: 'Hit %',
-          data: last10.map((s) => {
-            const shots = s.shots || [];
-            return shots.length
-              ? Math.round((shots.filter((sh) => sh.result === 'hit').length / shots.length) * 100)
-              : 0;
-          }),
-          borderColor: '#16a34a',
-          backgroundColor: 'rgba(22,163,74,0.15)',
-          tension: 0.35,
-          fill: true,
-          pointBackgroundColor: '#16a34a',
-        }],
-      },
-      options: lineOptions(100, '%'),
-    }));
-
-    const missTotal = Object.values(misses).reduce((a, b) => a + b, 0);
-    chartInstances.push(new Chart(document.getElementById('miss-chart'), {
-      type: 'doughnut',
-      data: {
-        labels: ['Left', 'Right', 'Long', 'Short'],
-        datasets: [{
-          data: [misses.left, misses.right, misses.long, misses.short],
-          backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444'],
-          borderColor: '#1e293b',
-          borderWidth: 2,
-        }],
-      },
-      options: {
-        plugins: {
-          legend: { labels: { color: '#94a3b8', font: { size: 13 } } },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => {
-                const pct = missTotal ? Math.round((ctx.parsed / missTotal) * 100) : 0;
-                return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
-              },
-            },
-          },
+  if (last10.length > 1) {
+    importChart().then((Chart) => {
+      chartInstances.push(new Chart(document.getElementById('trend-chart'), {
+        type: 'line',
+        data: {
+          labels: last10.map((s) => fmtDate(s.started_at)),
+          datasets: [{
+            label: 'Hit %',
+            data: last10.map((s) => {
+              const shots = s.shots || [];
+              return shots.length
+                ? Math.round((shots.filter((sh) => sh.result === 'hit').length / shots.length) * 100)
+                : 0;
+            }),
+            borderColor: '#16a34a',
+            backgroundColor: 'rgba(22,163,74,0.15)',
+            tension: 0.35,
+            fill: true,
+            pointBackgroundColor: '#16a34a',
+          }],
         },
-        responsive: true,
-        maintainAspectRatio: true,
-      },
-    }));
-  });
+        options: lineOptions(100, '%'),
+      }));
+    });
+  }
 }
 
 // ── Clubs ─────────────────────────────────────────────────────────────────────
@@ -133,51 +111,81 @@ function renderClubs() {
 
   const clubs = Object.values(byClub).sort((a, b) => b.shots.length - a.shots.length);
 
+  if (!clubs.length) {
+    content.innerHTML = '<p class="empty-state">No shots logged yet.</p>';
+    return;
+  }
+
   content.innerHTML = `
-    <div class="chart-card">
-      <h3>Accuracy by Club</h3>
-      <div class="chart-wrap"><canvas id="club-chart"></canvas></div>
-    </div>
-    <div class="club-stat-list">
+    <div class="club-cards">
       ${clubs.map((c) => {
-        const hits = c.shots.filter((s) => s.result === 'hit').length;
-        const pct  = Math.round((hits / c.shots.length) * 100);
-        const tend = missTendency(c.shots);
-        const cls  = pct >= 70 ? 'good' : pct >= 50 ? 'ok' : 'bad';
+        const hits  = c.shots.filter((s) => s.result === 'hit').length;
+        const pct   = Math.round((hits / c.shots.length) * 100);
+        const cls   = pct >= 70 ? 'good' : pct >= 50 ? 'ok' : 'bad';
+        const tend  = missTendency(c.shots);
+        const arrow = { left: '←', right: '→', long: '↑', short: '↓' }[tend] || '—';
+        const dist  = { hit: 0, left: 0, right: 0, long: 0, short: 0 };
+        c.shots.forEach((s) => dist[s.result]++);
+        const t = c.shots.length || 1;
         return `
-          <div class="club-stat-row">
-            <span class="csr-abbr">${c.abbr}</span>
-            <div class="csr-bar-wrap">
-              <div class="csr-bar ${cls}" style="width:${pct}%"></div>
+          <div class="club-card">
+            <div class="club-card-header">
+              <span class="club-card-name">${c.name}</span>
+              <span class="club-card-meta">${c.shots.length} shots</span>
             </div>
-            <span class="csr-pct ${cls}">${pct}%</span>
-            <span class="csr-tend">${tend ? tend : '—'}</span>
+            <div class="club-card-body">
+              <div class="club-card-acc">
+                <span class="club-card-pct ${cls}">${pct}%</span>
+                <span class="club-card-label">accuracy</span>
+              </div>
+              <div class="club-card-miss">
+                <span class="miss-arrow ${tend}">${arrow}</span>
+                <span class="club-card-label">${tend || 'no miss'}</span>
+              </div>
+              <div class="club-mini-dist">
+                ${shotDistGrid(dist, t, true)}
+              </div>
+            </div>
           </div>`;
       }).join('')}
     </div>
   `;
+}
 
-  importChart().then((Chart) => {
-    chartInstances.push(new Chart(document.getElementById('club-chart'), {
-      type: 'bar',
-      data: {
-        labels: clubs.map((c) => c.abbr),
-        datasets: [{
-          data: clubs.map((c) => {
-            const hits = c.shots.filter((s) => s.result === 'hit').length;
-            return Math.round((hits / c.shots.length) * 100);
-          }),
-          backgroundColor: clubs.map((c) => {
-            const hits = c.shots.filter((s) => s.result === 'hit').length;
-            const pct  = (hits / c.shots.length) * 100;
-            return pct >= 70 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#ef4444';
-          }),
-          borderRadius: 4,
-        }],
-      },
-      options: lineOptions(100, '%'),
-    }));
-  });
+// ── Shot Distribution Grid ────────────────────────────────────────────────────
+
+function shotDistGrid(dist, total, mini = false) {
+  const pct  = (k) => Math.round((dist[k] / total) * 100);
+  const cls  = mini ? 'dist-grid dist-grid-mini' : 'dist-grid';
+
+  // Intensity: how prominent to make each miss cell (0–1)
+  const maxMiss = Math.max(dist.left, dist.right, dist.long, dist.short, 1);
+  const intensity = (k) => (dist[k] / maxMiss).toFixed(2);
+
+  return `
+    <div class="${cls}">
+      <div class="dist-cell dist-long"  style="--i:${intensity('long')}">
+        <span class="dist-pct">${pct('long')}%</span>
+        ${!mini ? '<span class="dist-label">LONG</span>' : ''}
+      </div>
+      <div class="dist-cell dist-left"  style="--i:${intensity('left')}">
+        <span class="dist-pct">${pct('left')}%</span>
+        ${!mini ? '<span class="dist-label">LEFT</span>' : ''}
+      </div>
+      <div class="dist-cell dist-hit">
+        <span class="dist-pct">${pct('hit')}%</span>
+        ${!mini ? '<span class="dist-label">HIT</span>' : ''}
+      </div>
+      <div class="dist-cell dist-right" style="--i:${intensity('right')}">
+        <span class="dist-pct">${pct('right')}%</span>
+        ${!mini ? '<span class="dist-label">RIGHT</span>' : ''}
+      </div>
+      <div class="dist-cell dist-short" style="--i:${intensity('short')}">
+        <span class="dist-pct">${pct('short')}%</span>
+        ${!mini ? '<span class="dist-label">SHORT</span>' : ''}
+      </div>
+    </div>
+  `;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
