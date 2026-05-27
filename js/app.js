@@ -13,13 +13,20 @@ export function navigate(route) {
   render(route);
 }
 
+let _loadingUserData = false;
 export async function loadUserData() {
-  let { data: clubs } = await getClubs(state.user.id);
-  if (!clubs || clubs.length === 0) {
-    await seedClubs(state.user.id);
-    ({ data: clubs } = await getClubs(state.user.id));
+  if (_loadingUserData) return;
+  _loadingUserData = true;
+  try {
+    let { data: clubs } = await getClubs(state.user.id);
+    if (!clubs || clubs.length === 0) {
+      await seedClubs(state.user.id);
+      ({ data: clubs } = await getClubs(state.user.id));
+    }
+    state.clubs = (clubs || []).filter((c) => c.is_active);
+  } finally {
+    _loadingUserData = false;
   }
-  state.clubs = (clubs || []).filter((c) => c.is_active);
 }
 
 async function render(route) {
