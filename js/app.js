@@ -86,7 +86,7 @@ async function init() {
 
   if ('serviceWorker' in navigator) {
     try {
-      const reg = await navigator.serviceWorker.register('./sw.js');
+      navigator.serviceWorker.register('./sw.js');
       navigator.serviceWorker.addEventListener('message', (e) => {
         if (e.data?.type === 'SYNC_SHOTS') syncOfflineShots();
       });
@@ -107,28 +107,36 @@ async function init() {
     }
   });
 
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    const hash       = location.hash.slice(1);
+  // Guard so only the first of (INITIAL_SESSION / getSession fallback) renders
+  let booted = false;
+  async function boot(session) {
+    if (booted) return;
+    booted = true;
+    const hash        = location.hash.slice(1);
     const isMagicLink = hash.startsWith('access_token') || hash.startsWith('error=');
+    if (session) {
+      state.user = session.user;
+      await loadUserData();
+      const safeRoutes = ['home', 'analysis', 'settings'];
+      render(safeRoutes.includes(hash) ? hash : 'home');
+      syncOfflineShots();
+    } else if (!isMagicLink) {
+      render('auth');
+    }
+  }
 
+  supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'INITIAL_SESSION') {
-      if (session) {
-        state.user = session.user;
-        await loadUserData();
-        const safeRoutes = ['home', 'analysis', 'settings'];
-        render(safeRoutes.includes(hash) ? hash : 'home');
-        syncOfflineShots();
-      } else if (!isMagicLink) {
-        render('auth');
-      }
-      // If isMagicLink with no session yet — wait for SIGNED_IN below
+      await boot(session);
     } else if (event === 'SIGNED_IN' && session) {
+      booted = true; // prevent boot() from firing again
       state.user = session.user;
       await loadUserData();
       history.replaceState(null, '', location.pathname + '#home');
       await render('home');
       syncOfflineShots();
     } else if (event === 'SIGNED_OUT') {
+      booted     = false;
       state.user = null;
       state.clubs = [];
       state.activeSession = null;
@@ -136,6 +144,10 @@ async function init() {
       render('auth');
     }
   });
+
+  // Fallback: if INITIAL_SESSION never fires, call getSession directly
+  const { data } = await supabase.auth.getSession();
+  await boot(data.session);
 }
 
 init().catch(console.error);
