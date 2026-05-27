@@ -214,6 +214,34 @@ h3 { font-size: 1rem;   font-weight: 600; color: var(--muted); margin-bottom: 8p
 .auth-title    { font-size: 2rem; }
 .auth-subtitle { color: var(--muted); margin-bottom: 8px; }
 
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 3px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 9px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.auth-tab.active {
+  background: var(--surface2);
+  color: var(--text);
+}
+
 .auth-form {
   width: 100%;
   max-width: 320px;
