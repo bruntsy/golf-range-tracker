@@ -89,6 +89,10 @@ async function init() {
       navigator.serviceWorker.register('./sw.js');
       navigator.serviceWorker.addEventListener('message', (e) => {
         if (e.data?.type === 'SYNC_SHOTS') syncOfflineShots();
+        // Auto-reload when a new SW activates — but never mid-session
+        if (e.data?.type === 'SW_UPDATED' && !state.activeSession) {
+          window.location.reload();
+        }
       });
     } catch (_) {}
   }
