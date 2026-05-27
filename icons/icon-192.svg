@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#0f172a"/>
+  <circle cx="96" cy="148" r="18" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+  <!-- flag pole -->
+  <rect x="93" y="44" width="4" height="96" rx="2" fill="#16a34a"/>
+  <!-- flag -->
+  <polygon points="97,44 137,62 97,80" fill="#16a34a"/>
+  <!-- shine -->
+  <polygon points="97,44 137,62 117,62" fill="rgba(255,255,255,0.15)"/>
+</svg>
