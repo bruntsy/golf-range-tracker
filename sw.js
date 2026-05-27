@@ -1,4 +1,4 @@
-const CACHE = 'range-tracker-v1';
+const CACHE = 'range-tracker-v2';
 const ASSETS = [
   './',
   './index.html',
