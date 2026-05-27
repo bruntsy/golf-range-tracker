@@ -305,8 +305,57 @@ h3 { font-size: 1rem;   font-weight: 600; color: var(--muted); margin-bottom: 8p
   user-select: none;
 }
 
-.club-name  { font-size: 22px; font-weight: 700; line-height: 1.2; }
-.club-stats { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.club-input-wrap { position: relative; }
+
+.club-input {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 2px solid var(--border);
+  border-radius: 0;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 4px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.club-input:focus { border-bottom-color: var(--green); }
+
+.club-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  min-width: 180px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  z-index: 300;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.club-option {
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.club-option:last-child  { border-bottom: none; }
+.club-option:active      { background: var(--green-dim); }
+
+.club-option-abbr { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+.club-stats { font-size: 13px; color: var(--muted); margin-top: 6px; }
 
 /* Shot area fills remaining vertical space */
 .shot-area {

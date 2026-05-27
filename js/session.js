@@ -16,7 +16,18 @@ export function renderSession(container) {
       <div class="session-header">
         <button class="club-nav" id="prev-club" aria-label="Previous club">&#8249;</button>
         <div class="club-center" id="club-center">
-          <div class="club-name" id="club-name">${currentClub().name}</div>
+          <div class="club-input-wrap">
+            <input
+              type="text"
+              id="club-input"
+              class="club-input"
+              value="${currentClub().name}"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Type club…"
+            />
+            <div class="club-dropdown hidden" id="club-dropdown"></div>
+          </div>
           <div class="club-stats" id="club-stats">${clubStats()}</div>
         </div>
         <button class="club-nav" id="next-club" aria-label="Next club">&#8250;</button>
@@ -58,17 +69,56 @@ export function renderSession(container) {
     btn.addEventListener('pointerout',  () => btn.classList.remove('pressing'));
   });
 
-  // Club switching
+  // Prev/next arrows
   document.getElementById('prev-club').addEventListener('click', () => changeClub(-1));
   document.getElementById('next-club').addEventListener('click', () => changeClub(1));
 
-  // Swipe on club center area
-  const center = document.getElementById('club-center');
-  center.addEventListener('touchstart', (e) => { swipeStartX = e.touches[0].clientX; }, { passive: true });
-  center.addEventListener('touchend',   (e) => {
-    const dx = e.changedTouches[0].clientX - swipeStartX;
-    if (Math.abs(dx) > 40) changeClub(dx > 0 ? -1 : 1);
-  }, { passive: true });
+  // Type-ahead club input
+  const clubInput    = document.getElementById('club-input');
+  const clubDropdown = document.getElementById('club-dropdown');
+
+  function showDropdown(filter = '') {
+    const q = filter.toLowerCase();
+    const matches = state.clubs.filter((c) =>
+      c.name.toLowerCase().includes(q) || c.abbreviation.toLowerCase().includes(q)
+    );
+    if (!matches.length) { clubDropdown.classList.add('hidden'); return; }
+    clubDropdown.innerHTML = matches.map((c) => `
+      <div class="club-option" data-id="${c.id}">${c.name} <span class="club-option-abbr">${c.abbreviation}</span></div>
+    `).join('');
+    clubDropdown.classList.remove('hidden');
+  }
+
+  clubInput.addEventListener('focus', () => {
+    clubInput.select();
+    showDropdown('');
+  });
+
+  clubInput.addEventListener('input', () => showDropdown(clubInput.value));
+
+  clubDropdown.addEventListener('mousedown', (e) => {
+    const opt = e.target.closest('.club-option');
+    if (!opt) return;
+    e.preventDefault();
+    selectClubById(opt.dataset.id);
+    clubDropdown.classList.add('hidden');
+  });
+
+  // Also works on touch
+  clubDropdown.addEventListener('touchend', (e) => {
+    const opt = e.target.closest('.club-option');
+    if (!opt) return;
+    e.preventDefault();
+    selectClubById(opt.dataset.id);
+    clubDropdown.classList.add('hidden');
+  });
+
+  clubInput.addEventListener('blur', () => {
+    setTimeout(() => {
+      clubDropdown.classList.add('hidden');
+      clubInput.value = currentClub().name;
+    }, 150);
+  });
 
   document.getElementById('undo-btn').addEventListener('click', handleUndo);
   document.getElementById('end-btn').addEventListener('click', handleEnd);
@@ -114,7 +164,17 @@ async function handleUndo() {
 function changeClub(dir) {
   const len = state.clubs.length;
   state.currentClubIndex = (state.currentClubIndex + dir + len) % len;
-  document.getElementById('club-name').textContent = currentClub().name;
+  updateClubDisplay();
+}
+
+function selectClubById(id) {
+  const idx = state.clubs.findIndex((c) => c.id === id);
+  if (idx !== -1) { state.currentClubIndex = idx; updateClubDisplay(); }
+}
+
+function updateClubDisplay() {
+  const input = document.getElementById('club-input');
+  if (input) input.value = currentClub().name;
   document.getElementById('club-stats').textContent = clubStats();
 }
 
