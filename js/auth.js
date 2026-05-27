@@ -18,6 +18,7 @@ export function renderAuth(container) {
         <button type="submit" class="btn btn-primary btn-block" id="auth-btn">Sign In</button>
       </form>
 
+      <button class="btn-link" id="reset-btn">Forgot password?</button>
       <div id="auth-message" class="hidden"></div>
     </div>
   `;
@@ -64,5 +65,20 @@ export function renderAuth(container) {
       btn.disabled    = false;
     }
     // On successful signin, onAuthStateChange in app.js handles navigation
+  });
+
+  document.getElementById('reset-btn').addEventListener('click', async () => {
+    const email = document.getElementById('auth-email').value.trim();
+    const msg   = document.getElementById('auth-message');
+    if (!email) {
+      msg.className   = 'auth-error';
+      msg.textContent = 'Enter your email above first.';
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname,
+    });
+    msg.className   = error ? 'auth-error' : 'auth-success';
+    msg.textContent = error ? error.message : `Password reset email sent to ${email}`;
   });
 }

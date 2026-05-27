@@ -252,6 +252,16 @@ h3 { font-size: 1rem;   font-weight: 600; color: var(--muted); margin-bottom: 8p
 
 .auth-success { color: var(--green);  font-size: 15px; }
 .auth-error   { color: var(--red);    font-size: 14px; }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px;
+}
 .hidden       { display: none !important; }
 
 /* ── Home Screen ──────────────────────────────────────────────────────────── */
